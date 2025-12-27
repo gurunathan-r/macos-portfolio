@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Apple, Battery, Wifi, Search, Control } from "lucide-react";
+import { Apple, Battery, Wifi, Search,} from "lucide-react";
 
 export default function MenuBar() {
     const [time, setTime] = useState(new Date());
