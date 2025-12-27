@@ -126,7 +126,7 @@ export default function Window({ windowState, children }: WindowProps) {
                     )}
 
                     {/* Content */}
-                    <div className="flex-1 overflow-auto relative pb-12">
+                    <div className={`flex-1 overflow-auto relative ${isMobile ? "pb-12" : ""}`}>
                         {children}
                     </div>
 

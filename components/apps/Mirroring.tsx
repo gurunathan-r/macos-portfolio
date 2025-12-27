@@ -173,35 +173,7 @@ export default function Mirroring() {
                             dragConstraints={{ left: 0, right: 0 }}
                             onDragEnd={(_, info) => { if (info.offset.x > 100) setState('lock_screen'); }}
                         >
-                            {/* Viewfinder (Dummy) */}
-                            <div className="flex-1 bg-[#1a1a1a] relative m-0 rounded-b-3xl overflow-hidden mt-12">
-                                <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 opacity-20 pointer-events-none">
-                                    <div className="border border-white/30" /> <div className="border border-white/30" /> <div className="border border-white/30" />
-                                    <div className="border border-white/30" /> <div className="border border-white/30" /> <div className="border border-white/30" />
-                                    <div className="border border-white/30" /> <div className="border border-white/30" /> <div className="border border-white/30" />
-                                </div>
-                                <div className="absolute top-4 right-4 bg-black/50 px-2 py-1 rounded text-xs font-mono text-yellow-500">
-                                    AF-L
-                                </div>
-                            </div>
-
-                            {/* Controls */}
-                            <div className="h-32 bg-black flex flex-col items-center justify-center gap-4 pb-6">
-                                <div className="flex gap-6 text-xs font-medium text-gray-500 uppercase tracking-widest">
-                                    <span>Cinematic</span>
-                                    <span>Video</span>
-                                    <span className="text-yellow-500">Photo</span>
-                                    <span>Portrait</span>
-                                    <span>Pano</span>
-                                </div>
-                                <div className="flex items-center justify-between w-full px-8">
-                                    <div className="w-12 h-12 bg-gray-800 rounded-md" /> {/* Gallery Preview */}
-                                    <div className="w-16 h-16 rounded-full border-4 border-white bg-white active:scale-95 transition cursor-pointer shadow-lg" /> {/* Shutter */}
-                                    <button onClick={() => setState('lock_screen')} className="w-12 h-12 flex items-center justify-center bg-gray-800 rounded-full">
-                                        <ChevronLeft /> {/* Back/Flip */}
-                                    </button>
-                                </div>
-                            </div>
+                            <CameraView onBack={() => setState('lock_screen')} />
                         </motion.div>
                     )}
 
@@ -249,5 +221,159 @@ export default function Mirroring() {
                 )}
             </div>
         </div>
+    );
+}
+
+function CameraView({ onBack }: { onBack: () => void }) {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [zoom, setZoom] = useState(1);
+    const [stream, setStream] = useState<MediaStream | null>(null);
+
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        let currentStream: MediaStream | null = null;
+
+        async function startCamera() {
+            if (typeof window !== 'undefined' && !window.isSecureContext) {
+                setError("Camera requires HTTPS or localhost. If testing on mobile LAN, use a secure connection.");
+                return;
+            }
+
+            try {
+                const s = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' } // Prefer back camera
+                });
+                setStream(s);
+                currentStream = s;
+                if (videoRef.current) {
+                    videoRef.current.srcObject = s;
+                }
+                setError(null);
+            } catch (err: any) {
+                console.error("Camera access denied or error:", err);
+                setError(err.message || "Failed to access camera");
+            }
+        }
+
+        startCamera();
+
+        return () => {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, []);
+
+    const takePhoto = () => {
+        if (!videoRef.current || !canvasRef.current) return;
+
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Set canvas size to video actual size
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        // Draw video frame to canvas
+        // Digital zoom via crop:
+        // Source Frame: (cx, cy) center. 
+        // Width/Height to crop = VideoSize / zoom.
+        const w = canvas.width;
+        const h = canvas.height;
+        const cropW = w / zoom;
+        const cropH = h / zoom;
+        const cropX = (w - cropW) / 2;
+        const cropY = (h - cropH) / 2;
+
+        ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, w, h);
+
+        // Convert to image and download
+        const image = canvas.toDataURL("image/png");
+        const link = document.createElement('a');
+        link.href = image;
+        link.download = `photo_${Date.now()}.png`;
+        link.click();
+    };
+
+    return (
+        <>
+            {/* Viewfinder */}
+            <div className="flex-1 bg-black relative m-0 rounded-b-3xl overflow-hidden mt-12">
+                <div className="w-full h-full relative overflow-hidden flex items-center justify-center">
+                    {/* Error Message */}
+                    {error && (
+                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 text-center bg-black/80">
+                            <div className="text-red-500 mb-2 font-bold">Camera Error</div>
+                            <div className="text-white text-sm">{error}</div>
+                        </div>
+                    )}
+
+                    {/* Video Feed */}
+                    <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-full object-cover transition-transform duration-300"
+                        style={{ transform: `scale(${zoom})` }}
+                    />
+                </div>
+
+                {/* Grid Overlay */}
+                <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 opacity-20 pointer-events-none">
+                    <div className="border border-white/30" /> <div className="border border-white/30" /> <div className="border border-white/30" />
+                    <div className="border border-white/30" /> <div className="border border-white/30" /> <div className="border border-white/30" />
+                    <div className="border border-white/30" /> <div className="border border-white/30" /> <div className="border border-white/30" />
+                </div>
+
+                {/* Zoom Indicator/Controls */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-4 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full">
+                    {[1, 2, 5, 8].map((z) => (
+                        <button
+                            key={z}
+                            onClick={(e) => { e.stopPropagation(); setZoom(z); }}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition ${zoom === z ? 'bg-yellow-500 text-black' : 'bg-black/50 text-white'}`}
+                        >
+                            {z}x
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Controls */}
+            <div className="h-32 bg-black flex flex-col items-center justify-center gap-4 pb-6 relative z-50">
+                <div className="flex gap-6 text-xs font-medium text-gray-500 uppercase tracking-widest">
+                    <span>Cinematic</span>
+                    <span>Video</span>
+                    <span className="text-yellow-500">Photo</span>
+                    <span>Portrait</span>
+                    <span>Pano</span>
+                </div>
+                <div className="flex items-center justify-between w-full px-8">
+                    <div className="w-12 h-12 bg-gray-800 rounded-md overflow-hidden relative">
+                        {/* Last photo Preview (Dummy or real?) */}
+                    </div>
+
+                    {/* Shutter Button */}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); takePhoto(); }}
+                        className="w-16 h-16 rounded-full border-4 border-white bg-white active:scale-95 transition cursor-pointer shadow-lg relative group"
+                    >
+                        <span className="absolute inset-0 rounded-full border border-black/20" />
+                    </button>
+
+                    <button onClick={onBack} className="w-12 h-12 flex items-center justify-center bg-gray-800 rounded-full">
+                        <ChevronLeft /> {/* Back/Flip */}
+                    </button>
+                </div>
+            </div>
+
+            {/* Invisible Canvas for capture */}
+            <canvas ref={canvasRef} className="hidden" />
+        </>
     );
 }
