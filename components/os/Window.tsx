@@ -34,17 +34,9 @@ export default function Window({ windowState, children }: WindowProps) {
         <AnimatePresence>
             {windowState.isOpen && !windowState.isMinimized && (
                 <motion.div
-                    drag={isMobile ? "y" : true}
-                    dragListener={!isMobile} // On mobile, drag is initiated by the home indicator handles
-                    dragControls={dragControls}
-                    dragConstraints={isMobile ? { top: -1000, bottom: 0 } : undefined}
+                    drag={!isMobile}
                     dragMomentum={false}
-                    dragElastic={isMobile ? 0.2 : 0} // Add some resistance on mobile swipe up
-                    onDragEnd={(e, info: PanInfo) => {
-                        if (isMobile && info.offset.y < -100) {
-                            closeWindow(windowState.id);
-                        }
-                    }}
+                    dragListener={!isMobile}
                     initial={{
                         opacity: 0,
                         scale: 0,
@@ -56,12 +48,12 @@ export default function Window({ windowState, children }: WindowProps) {
                         opacity: 1,
                         scale: windowState.isMaximized ? 1 : 1,
                         width: isMobile ? "100%" : (windowState.isMaximized ? "100%" : (windowState.id === 'mirroring' ? "320px" : "800px")),
-                        height: isMobile ? "100%" : (windowState.isMaximized ? "calc(100% - 32px)" : (windowState.id === 'mirroring' ? "680px" : "600px")),
+                        height: isMobile ? "calc(100dvh - 32px)" : (windowState.isMaximized ? "calc(100% - 32px)" : (windowState.id === 'mirroring' ? "680px" : "600px")),
                         x: isMobile ? 0 : (windowState.isMaximized ? 0 : "-50%"),
                         y: isMobile ? 0 : (windowState.isMaximized ? 0 : "-50%"),
                         marginLeft: 0, // Reset margin
                         borderRadius: isMobile ? 0 : (windowState.isMaximized ? 0 : (windowState.id === 'mirroring' ? "48px" : "12px")),
-                        top: isMobile ? 0 : (windowState.isMaximized ? "32px" : "50%"),
+                        top: isMobile ? 32 : (windowState.isMaximized ? "32px" : "50%"), // Start after MenuBar on mobile
                         left: isMobile ? 0 : (windowState.isMaximized ? 0 : "50%"),
                     }}
                     exit={{
@@ -77,11 +69,16 @@ export default function Window({ windowState, children }: WindowProps) {
                         damping: 30
                     }}
                     style={{
-                        zIndex: isMobile ? 60 : windowState.zIndex, // Higher z-index on mobile to cover dock/desktop
+                        zIndex: isMobile ? 40 : windowState.zIndex, // Lower than Dock (50 or 70)
                         position: 'absolute'
                     }}
                     className="pointer-events-auto bg-white dark:bg-[#1e1e1e] shadow-2xl overflow-hidden flex flex-col border border-gray-200 dark:border-gray-800 backdrop-blur-xl bg-opacity-80 dark:bg-opacity-80 select-none cursor-default"
                     onMouseDown={() => focusWindow(windowState.id)}
+                    onDoubleClick={() => {
+                        if (isMobile) {
+                            closeWindow(windowState.id);
+                        }
+                    }}
                 >
                     {/* Title Bar - Only show on Desktop */}
                     {!isMobile && (
@@ -129,15 +126,14 @@ export default function Window({ windowState, children }: WindowProps) {
                     )}
 
                     {/* Content */}
-                    <div className="flex-1 overflow-auto relative">
+                    <div className="flex-1 overflow-auto relative pb-12">
                         {children}
                     </div>
 
-                    {/* Mobile Home Indicator Handle */}
+                    {/* Mobile Home Indicator Handle - Just Visual Now? Or removed. Removing dragControls. */}
                     {isMobile && (
                         <div
-                            className="absolute bottom-0 left-0 right-0 h-8 flex items-end justify-center pb-2 z-50 touch-none"
-                            onPointerDown={(e) => dragControls.start(e)}
+                            className="absolute bottom-2 left-0 right-0 h-8 flex items-end justify-center pb-2 z-50 touch-none pointer-events-none"
                         >
                             <div className="w-32 h-1.5 bg-black/20 dark:bg-white/20 rounded-full backdrop-blur-md" />
                         </div>

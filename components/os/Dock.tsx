@@ -1,10 +1,12 @@
 "use client";
 
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { useRef } from "react";
+import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
+import { useRef, useState, useEffect } from "react";
 import { AppID } from "@/types/os";
 import { useOS } from "@/context/OSContext";
 import { Monitor, CreditCard, Chrome, Mail, Music, Smartphone, User } from "lucide-react"; // Icons for apps
+
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 function DockIcon({
     mouseX,
@@ -18,6 +20,7 @@ function DockIcon({
     icon: any;
 }) {
     const { openWindow, windows } = useOS();
+    const isMobile = useIsMobile();
     const ref = useRef<HTMLDivElement>(null);
 
     const distance = useTransform(mouseX, (val: number) => {
@@ -31,11 +34,11 @@ function DockIcon({
     return (
         <motion.div
             ref={ref}
-            style={{ width }}
+            style={{ width: isMobile ? 45 : width }}
             className="aspect-square rounded-xl bg-gray-200/50 dark:bg-gray-700/50 backdrop-blur-md border border-white/20 flex items-center justify-center cursor-pointer relative group"
             onClick={() => openWindow(id)}
         >
-            <span className="absolute -top-12 bg-gray-800/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+            <span className="absolute -top-12 bg-gray-800/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none hidden md:block">
                 {title}
             </span>
             {typeof icon === 'string' ? (
@@ -58,15 +61,26 @@ function DockIcon({
 
 export default function Dock() {
     const mouseX = useMotionValue(Infinity);
-    const { theme } = useOS();
+    const { theme, windows } = useOS();
+    const isMobile = useIsMobile();
+
+    // Check if any window is open and not minimized (Standard "Mobile App Open" state)
+    // Actually, even if minimized, they appear in "switcher". But for "Home Screen" definition in this context:
+    // If an app is "Open" (full screen), dock is hidden.
+    const isAnyWindowOpen = Object.values(windows).some(w => w.isOpen && !w.isMinimized);
 
     const getIcon = (name: string) => {
         return theme === 'dark' ? `/assets/${name}-dark.png` : `/assets/${name}.png`;
     }
 
+    // Mobile: Hide Dock if any app is open
+    if (isMobile && isAnyWindowOpen) {
+        return null;
+    }
+
     return (
         <div
-            className="fixed bottom-4 left-1/2 -translate-x-1/2 flex h-16 items-end gap-4 rounded-2xl bg-white/20 px-4 pb-3 dark:bg-black/20 backdrop-blur-2xl border border-white/10 z-50"
+            className={`fixed bottom-4 flex h-16 items-end rounded-2xl bg-white/20 px-4 pb-3 dark:bg-black/20 backdrop-blur-2xl border border-white/10 z-50 ${isMobile ? 'left-0 right-0 mx-auto gap-2 w-[95vw] justify-between overflow-x-auto' : 'left-1/2 -translate-x-1/2 gap-4'}`}
             onMouseMove={(e) => mouseX.set(e.pageX)}
             onMouseLeave={() => mouseX.set(Infinity)}
         >

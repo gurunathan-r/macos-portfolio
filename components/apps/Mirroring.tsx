@@ -227,7 +227,10 @@ export default function Mirroring() {
                                 <h2 className="text-3xl font-bold mb-1">GURU</h2>
                                 <p className="text-gray-500 text-lg mb-8">iPhone Owner</p>
 
-                                <div className="w-full bg-gray-100 dark:bg-[#1c1c1e] rounded-xl p-4 flex items-center justify-between mb-4 cursor-pointer active:bg-gray-200 dark:active:bg-[#2c2c2e] transition">
+                                <a
+                                    href="tel:+919003015441"
+                                    className="w-full bg-gray-100 dark:bg-[#1c1c1e] rounded-xl p-4 flex items-center justify-between mb-4 cursor-pointer active:bg-gray-200 dark:active:bg-[#2c2c2e] transition block text-inherit no-underline"
+                                >
                                     <div className="flex flex-col">
                                         <span className="text-xs text-gray-500">mobile</span>
                                         <span className="text-blue-500 text-xl font-medium">+91 9003015441</span>
@@ -235,7 +238,7 @@ export default function Mirroring() {
                                     <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
                                         <Phone size={20} fill="white" />
                                     </div>
-                                </div>
+                                </a>
                             </div>
                         </motion.div>
                     )}

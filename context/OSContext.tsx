@@ -14,6 +14,7 @@ import {
   Song,
   WindowState,
 } from "@/types/os";
+import { songs } from "@/constants/songs";
 
 const initialWindows: Record<AppID, WindowState> = {
   about: {
@@ -99,6 +100,17 @@ export function OSProvider({ children }: { children: React.ReactNode }) {
             progress: (audio.currentTime / audio.duration) * 100,
           }));
         }
+      };
+
+      audio.onended = () => {
+        const randomSong = songs[Math.floor(Math.random() * songs.length)];
+        audio.src = randomSong.url || "";
+        audio.play().catch(e => console.error("Auto-play failed", e));
+        setMusic({
+          isPlaying: true,
+          currentSong: randomSong,
+          progress: 0
+        });
       };
 
       audioRef.current = audio;
