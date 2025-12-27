@@ -5,10 +5,13 @@ import { AppID, MusicState, OSContextState, Song, WindowState } from "@/types/os
 
 // Extend Document interface for View Transitions API
 declare global {
-    interface Document {
-        startViewTransition?: (callback: () => void) => { finished: Promise<void> };
-    }
+  interface Document {
+    startViewTransition?: (callback: () => void) => {
+      finished: Promise<void>;
+    };
+  }
 }
+
 
 const initialWindows: Record<AppID, WindowState> = {
     about: { id: "about", title: "About Me", isOpen: true, isMinimized: false, isMaximized: false, zIndex: 1 },
